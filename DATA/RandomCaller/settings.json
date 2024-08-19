@@ -1,0 +1,12 @@
+{
+    "DisplayMode":"Number",
+    "DefaultFromNumber":1,
+    "DefaultToNumber":8,
+    "Description":{
+        "DisplayMode":"<文本型> 点名模式,有Number和Name两种模式,Number是学号,Name是姓名",
+        "DefaultFromNumber":"<整数型> 默认最小的序号,一般都是1",
+        "DefaultToNumber":"<整数型> 默认最大的序号,一般填写班级人数",
+        "Description":"描述项"
+    }
+
+}

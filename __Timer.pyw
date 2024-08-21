@@ -28,7 +28,7 @@ try:
     settings.read('settings.ini',encoding='utf-8')
     ctypes.windll.shcore.SetProcessDpiAwareness(int(settings.get('DPI','DPI_mode')))
 except:
-    if win32api.GetSystemMetrics(0)>=1920:
+    if win32api.GetSystemMetrics(0)>1920:
         try:
             ctypes.windll.shcore.SetProcessDpiAwareness(0)
         except:

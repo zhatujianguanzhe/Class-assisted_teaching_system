@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 from tkinter import *
-import tkinter.filedialog
 from tkinter.ttk import *
+import tkinter.filedialog
 from PIL import Image,ImageTk
 from datetime import datetime
 import tkinter,tkcalendar#tkcalendar是日期控件库,推荐在清华镜像源里下载
 import win32api,win32con,pywintypes,win32gui
-import ctypes,os,sys,configparser,re,json,time,threading,xlwings,random,subprocess,keyboard
+import ctypes,os,sys,configparser,re,json,time,threading,xlwings,random,subprocess,keyboard,webbrowser
+
+Agreement='''"班级辅助授课系统"软件使用协议:
+注意: 在下文中"本软件"及"软件"两词指代"班级辅助授课系统"软件.
+注意: 点击"确定"按钮代表您从此往后都同意以下全部协议,如果不同意,请立即点击"取消"按钮关闭本软件.
+1.使用本软件所造成的任何形式的任何损失均与本软件开发者无关
+2.本软件遵守AGPL-3.0协议,准确内容请查看其官网: www.fsf.org
+3.使用了本软件的用户将不能以任何原因起诉本软件开发者.
+4.未经授权的用户不得商用此软件(如需商用,请与开发者以E-mail形式联系,获得授权后方可商用).
+5.本协议的效力及解释受中华人民共和国法律的管辖.
+6.本协议的最终解释权归本软件开发者所有.
+7.用户必须同意以上协议才能使用本软件.'''
 
 if getattr(sys, 'frozen', None):
     res_icon_folder = str(sys._MEIPASS)+'\\icons'
@@ -14,6 +25,8 @@ else:
     res_icon_folder = str(os.path.dirname(__file__))+'\\icons'
 
 running_threading=True
+
+Permissions='STUDENT'
 
 def remove_BOM(config_path): #去掉配置文件开头的BOM字节
     content = open(config_path,encoding='utf-8').read()
@@ -26,7 +39,36 @@ def remove_BOM(config_path): #去掉配置文件开头的BOM字节
         pass
     open(config_path, 'r+',encoding='utf-8').write(content)
 
-def InputBox(title='', text='', parent=None, default='', canspace=False, canempty=False, canspecialtext=False):
+try:
+    remove_BOM('settings.ini')
+    settings = configparser.ConfigParser()
+    settings.read('settings.ini',encoding='utf-8')
+    ctypes.windll.shcore.SetProcessDpiAwareness(int(settings.get('DPI','DPI_mode')))
+except:
+    if win32api.GetSystemMetrics(0)>1920:
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(0)
+        except:
+            pass
+    else:#<1920
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except:
+            pass
+
+
+if os.path.exists('DATA/Agreement/Agree')!=True:
+    #要求你同意协议
+    if win32api.MessageBox(0,Agreement,'协议',win32con.MB_ICONWARNING|win32con.MB_TOPMOST|win32con.MB_DEFBUTTON2|win32con.MB_OKCANCEL)!=1:
+        sys.exit()
+    else:
+        with open('DATA/Agreement/Agree','w',encoding='utf-8') as f:
+            f.write('')
+
+
+
+
+def InputBox(title='', text='', parent=None, default='', canspace=False, canempty=False, canspecialtext=False,show=''):
     rt=None
     def close_handler():
         if parent != None:
@@ -117,7 +159,7 @@ def InputBox(title='', text='', parent=None, default='', canspace=False, canempt
     label_filename = Label(Input_Box_window, text=str(text), anchor="w")
     label_filename.place(x=20, y=20, width=80, height=30)
 
-    entry_filename = Entry(Input_Box_window, takefocus=True)
+    entry_filename = Entry(Input_Box_window, takefocus=True,show=show)
     entry_filename.place(x=100, y=20, width=300, height=30)
     entry_filename.focus()
     entry_filename.insert(0, str(default))
@@ -509,9 +551,9 @@ def Message_Box(parent,text,title,icon='none',buttonmode=1,defaultfocus=1):
     
     if icon=='question' or icon=='safe_question':
         win32api.MessageBeep(win32con.MB_ICONQUESTION)
-    elif icon=='error' or icon=='safe_error' or icon=='word_error_red' or icon=='word_deny':
+    elif icon=='error' or icon=='modern_error' or icon=='safe_error' or icon=='word_error_red' or icon=='word_deny':
         win32api.MessageBeep(win32con.MB_ICONERROR)
-    elif icon=='warning' or icon=='safe_warning' or icon=='word_correct_orange' or icon=='modern_warning':
+    elif icon=='warning' or icon=='safe_warning' or icon=='word_correct_orange' or icon=='modern_warning' or icon=='uac':
         win32api.MessageBeep(win32con.MB_ICONWARNING)
     elif icon=='info' or icon=='word_correct_green' or icon=='safe_correct' or icon=='modern_correct' or icon=='modern_correct_gray':
         win32api.MessageBeep(win32con.MB_ICONINFORMATION)
@@ -531,7 +573,7 @@ def Message_Box(parent,text,title,icon='none',buttonmode=1,defaultfocus=1):
         else:
             return False
 
-def InputText(parent,title='',):
+def InputText(parent,title='',state='normal',default=''):
     rt=None
     def close_command_window():
         parent.attributes('-disabled', 'false')
@@ -564,6 +606,8 @@ def InputText(parent,title='',):
     command_input=tkinter.Text(command_window,yscrollcommand=scrollBary.set,xscrollcommand=scrollBarx.set ,font='TkDefaultFont' , takefocus='true' , relief='groove' , bd=2,undo='true' , wrap='none')    
     command_input.place(x=20 , y=20 , width=560 , height=360)
     command_input.focus_set()
+    command_input.insert(0.0,default)
+    command_input['state']=state
 
     scrollBary.config(command=command_input.yview)
     scrollBarx.config(command=command_input.xview)
@@ -687,9 +731,9 @@ def Balloon_Box(parent=None,title=None,text=None,staytime=0):
             Balloon_Message_Box_Window.destroy()
 
     if parent!=None:
-        Balloon_Message_Box_Window=tkinter.Toplevel(parent)
+        Balloon_Message_Box_Window=Toplevel(parent)
     else:
-        Balloon_Message_Box_Window=tkinter.Tk()
+        Balloon_Message_Box_Window=Tk()
     Balloon_Message_Box_Window.overrideredirect(True)
     Balloon_Message_Box_Window.title("")
     width = 370
@@ -700,7 +744,7 @@ def Balloon_Box(parent=None,title=None,text=None,staytime=0):
     Balloon_Message_Box_Window.config(cursor='arrow')
     Balloon_Message_Box_Window.bind('<ButtonRelease-1>', lambda event: close_Balloon_Message_Box_Window())
 
-    rtitle = tkinter.Label(Balloon_Message_Box_Window,text=title,anchor="w", font='微软雅黑 12')
+    rtitle = tkinter.Label(Balloon_Message_Box_Window,text=title,anchor="w", font='微软雅黑 12',fg='#0078e4')
     rtitle.place(x=10, y=10, width=350, height=30)
     rtitle.bind('<ButtonRelease-1>', lambda event: close_Balloon_Message_Box_Window())
 
@@ -727,23 +771,236 @@ def Balloon_Box(parent=None,title=None,text=None,staytime=0):
     
     Balloon_Message_Box_Window.wait_window(Balloon_Message_Box_Window)
 
+def Password_Box(title='',text='',parent=None,defaultuser='',defaultpassword='',defaultusertuple=tuple(),savepassword_state=False,usernamestate='normal'):
+    rt=(None,None,'CANCEL')
+    def close_password_box_window():
+        if parent!=None:
+            parent.attributes('-disabled','false')
+        password_box_window.destroy()
+        if parent!=None:
+            parent.focus_set()
 
-try:
-    remove_BOM('settings.ini')
-    settings = configparser.ConfigParser()
-    settings.read('settings.ini',encoding='utf-8')
-    ctypes.windll.shcore.SetProcessDpiAwareness(int(settings.get('DPI','DPI_mode')))
-except:
-    if win32api.GetSystemMetrics(0)>=1920:
-        try:
-            ctypes.windll.shcore.SetProcessDpiAwareness(0)
-        except:
-            pass
-    else:#<1920
-        try:
-            ctypes.windll.shcore.SetProcessDpiAwareness(1)
-        except:
-            pass
+
+    def close_password_box_window_(nothing):
+        nonlocal rt
+        rt=(None,None,'CANCEL')
+        close_password_box_window()
+
+    def close_password_box_window_none():
+        close_password_box_window_(0)
+
+    def ok():
+        nonlocal rt
+        if password_box_window.focus_get() is not None:
+            if password_box_window.focus_get() == button_ok:
+                entry_username__=entry_username.get()
+                entry_password__=entry_password.get()
+                rt=(entry_username__,entry_password__,save_cb.get())
+                close_password_box_window()
+            elif password_box_window.focus_get() == button_cancel:
+                rt=(None,None,None)
+                close_password_box_window()
+            else:
+                entry_username__=entry_username.get()
+                entry_password__=entry_password.get()
+                rt=(entry_username__,entry_password__,save_cb.get())
+                close_password_box_window()
+    def ok_(nothing):
+        ok()
+    if parent!=None:
+        parent.attributes('-disabled','true')
+        password_box_window=Toplevel(parent)
+        password_box_window.transient(parent)
+    else:
+        password_box_window=Tk()
+    password_box_window.title(title)
+    # 设置窗口大小、居中
+    width = 480
+    height = 395
+    screenwidth = password_box_window.winfo_screenwidth()
+    screenheight = password_box_window.winfo_screenheight()
+    geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height-100) / 2)
+    password_box_window.geometry(geometry)
+    password_box_window.config(highlightthickness=0,bd=0)
+    password_box_window.protocol("WM_DELETE_WINDOW", close_password_box_window_none)
+    password_box_window.resizable(False,False)
+    password_box_window.bind('<Escape>',close_password_box_window_)
+    password_box_window.bind('<Return>',ok_)
+
+    img=PhotoImage(width=480, height=93,file=res_icon_folder+'\\passwordinput_headpicture.gif')
+    tkinter.Label(password_box_window,image=img,borderwidth=0,).place(x=0,y=0,width=480,height=93)
+
+    tkinter.Label(password_box_window,text=text,anchor='w',).place(x=15,y=100,width=455,height=50)
+
+    tkinter.Label(password_box_window,text='用户名(U):',anchor='w',underline=4).place(x=15,y=160,width=155,height=30)
+    entry_username=Combobox(password_box_window,values=defaultusertuple)
+    entry_username.place(x=170,y=160,width=250,height=30)
+    entry_username.insert(0,defaultuser)
+    entry_username['state']=usernamestate
+    def entry_username_focus_(nothing):
+        entry_username.focus()
+    password_box_window.bind('<Alt-u>',entry_username_focus_)
+
+
+    Button(password_box_window,text='...',state='disabled',underline=0).place(x=430,y=160,width=35,height=30)
+
+    tkinter.Label(password_box_window,text='密码(P):',anchor='w',underline=3).place(x=15,y=200,width=155,height=30)
+    entry_password=Entry(password_box_window,show='●')
+    entry_password.place(x=170,y=200,width=250,height=30)
+    entry_password.insert(0,defaultpassword)
+    entry_password.focus()
+    def entry_password_focus_(nothing):
+        entry_password.focus()
+    password_box_window.bind('<Alt-p>',entry_password_focus_)
+
+    s=Style()
+    s.configure('c.TCheckbutton',anchor='w')
+    save_cb=BooleanVar()
+    save_cb.set(False)
+    savepas=Checkbutton(password_box_window,text='记住我的密码(R)',underline=7,style='c.TCheckbutton',variable=save_cb,onvalue=True,offvalue=False)
+    savepas.place(x=170,y=240,width=250,height=30)
+    def savepas_focus_(nothing):
+        savepas.focus()
+    if savepassword_state==True:
+        password_box_window.bind('<Alt-r>',savepas_focus_)
+    else:
+        savepas['state']='disabled'
+
+    button_ok=Button(password_box_window,text='确定',default='active',command=ok)
+    button_ok.place(x=225,y=345,width=115,height=35)
+
+    button_cancel=Button(password_box_window,text='取消',command=close_password_box_window)
+    button_cancel.place(x=350,y=345,width=115,height=35)
+
+    def focus_see_(nothing):
+        if password_box_window.focus_get() != None:
+            if password_box_window.focus_get() == button_ok:
+                button_cancel['default'] = 'normal'
+                button_ok['default'] = 'active'
+            elif password_box_window.focus_get() == button_cancel:
+                button_ok['default'] = 'normal'
+                button_cancel['default'] = 'active'
+            else:
+                button_cancel['default'] = 'normal'
+                button_ok['default'] = 'active'
+    
+    savepas.bind("<FocusIn>", focus_see_)
+    savepas.bind("<FocusOut>", focus_see_)
+    button_ok.bind("<FocusIn>", focus_see_)
+    button_ok.bind("<FocusOut>", focus_see_)
+    button_cancel.bind("<FocusIn>", focus_see_)
+    button_cancel.bind("<FocusOut>", focus_see_)
+
+    password_box_window.wm_iconbitmap(str(res_icon_folder)+'\\icon.ico')
+    password_box_window.wait_window(password_box_window)
+    try:
+        return rt
+    except:
+        return (None,None,'CANCEL')
+
+def Link_Message_Box(title='',bigtext='',text='',text1='',text2='',parent=None,defaultfocus=1,defaultreturn=None):
+    def close_Message_Box_window():
+        if parent!=None:
+            parent.attributes('-disabled', 'false')
+        Link_Message_Box_window.destroy()
+        if parent!=None:
+            parent.focus_set()
+    def ok():
+        global rtn
+        rtn=1
+        close_Message_Box_window()
+    def cancel():
+        global rtn
+        rtn=2
+        close_Message_Box_window()
+    def ok_(even):
+        if Link_Message_Box_window==ok_button:
+            ok()
+        elif Link_Message_Box_window==cancel_button:
+            cancel()
+        else:
+            ok()
+    def cancel_(even):
+        global rtn
+        rtn=defaultreturn
+        close_Message_Box_window()
+    if parent!=None:
+        parent.attributes('-disabled', 'true')
+        Link_Message_Box_window=Toplevel(parent)
+        Link_Message_Box_window.wm_transient(parent)
+    else:
+        Link_Message_Box_window=Tk()
+    Link_Message_Box_window.title(str(title))
+    Link_Message_Box_window.config(background='white')
+    width = 400
+    height = 205
+    screenwidth = Link_Message_Box_window.winfo_screenwidth()
+    screenheight = Link_Message_Box_window.winfo_screenheight()
+    geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
+    Link_Message_Box_window.geometry(geometry)
+    Link_Message_Box_window.resizable(width=False, height=False)
+    Link_Message_Box_window.protocol("WM_DELETE_WINDOW", close_Message_Box_window)
+    Link_Message_Box_window.bind('<Escape>',cancel_)
+    Link_Message_Box_window.bind('<Return>',ok_)
+    Link_Message_Box_window.focus_set()
+
+    label_bigtext=tkinter.Label(Link_Message_Box_window,bg='white',font='微软雅黑 12',fg='#003399',text=str(bigtext),anchor='w')
+    label_bigtext.place(x=10,y=10,width=400,height=30)
+    
+    label_text=tkinter.Label(Link_Message_Box_window,bg='white',justify='left',wraplength = 320,anchor='w',text=str(text))
+    label_text.place(x=10,y=50,width=400,height=30)
+    
+    ok_button=tkinter.Button(Link_Message_Box_window,text=' → '+str(text1),command=ok,takefocus=True,anchor='w',bg='white',bd=0,activebackground='#bcdcf4',activeforeground='#0078e4',foreground='#0078e4',font='微软雅黑 12')
+    ok_button.place(x=10,y=95,width=380,height=50)
+
+    def Enter_ok_button(n):
+        ok_button.focus()
+        ok_button['bg']='#d9ebf9'
+    ok_button.bind('<Enter>',Enter_ok_button)
+    def Leave_ok_button(n):
+        ok_button['bg']='white'
+    ok_button.bind('<Leave>',Leave_ok_button)
+
+    cancel_button=tkinter.Button(Link_Message_Box_window,text=' → '+str(text2),command=cancel,takefocus=True,anchor='w',bg='white',bd=0,activebackground='#bcdcf4',activeforeground='#0078e4',foreground='#0078e4',font='微软雅黑 12')
+    cancel_button.place(x=10,y=145,width=380,height=50)
+    def Enter_cancel_button(n):
+        cancel_button.focus()
+        cancel_button['bg']='#d9ebf9'
+    cancel_button.bind('<Enter>',Enter_cancel_button)
+    def Leave_cancel_button(n):
+        cancel_button['bg']='white'
+    cancel_button.bind('<Leave>',Leave_cancel_button)
+
+    if defaultfocus==1:
+        ok_button.focus()
+    elif defaultfocus==2:
+        cancel_button.focus()
+    else:
+        raise ValueError('focus只能为1或2')
+
+    Link_Message_Box_window.wm_iconbitmap(str(res_icon_folder)+'\\icon.ico')
+    Link_Message_Box_window.wait_window(Link_Message_Box_window)
+
+    try:
+        return rtn
+    except:
+        return defaultreturn
+
+
+
+
+try:#正常课程表
+    with open('DATA/ClassTree/ClassTree.json','r',encoding='utf-8') as f:
+        json.loads(f.read())
+except Exception as error:
+    Message_Box(None, '读取课程表文件失败.\n此错误不影响程序正常运行,但是会导致课程表及其附属功能无法使用.\n错误代码: ' + str(error), '错误',icon='error')
+
+
+try:#读调休文件
+    remove_BOM('DATA/CompensatoryHolidays/CompensatoryHolidays.ini')
+    configparser.ConfigParser().read('DATA/CompensatoryHolidays/CompensatoryHolidays.ini',encoding='utf-8')
+except Exception as error:
+    Message_Box(None, '读取调休表文件失败.\n此错误不影响程序正常运行,但是会导致调休日及其附属功能无法使用.\n错误代码: ' + str(error), '错误', icon='error')
 
 
 
@@ -782,8 +1039,9 @@ def root_show():
     root.geometry('+%d+%d' % (root.winfo_x(), 100 ))
     Button_root_show.place(x=0,y=root.winfo_height()-20,width=300,height=30)
 
+
 root=Tk()
-draggable(root)
+draggable(root)#允许root被拖动
 root.title("班级辅助授课系统")
 # 设置窗口大小、居中
 width = 300
@@ -806,7 +1064,7 @@ def DO_SHOW_Var_class_on_notice():
     class_on_notice=Var_class_on_notice.get()
 Var_class_on_notice=BooleanVar()
 Var_class_on_notice.set(True)
-Checkbutton_root_class_on_notice=Checkbutton(root,text='上课提醒',variable=Var_class_on_notice,onvalue=True,offvalue=False,command=DO_SHOW_Var_class_on_notice)
+Checkbutton_root_class_on_notice=Checkbutton(root,text='上下课提醒',variable=Var_class_on_notice,onvalue=True,offvalue=False,command=DO_SHOW_Var_class_on_notice)
 Checkbutton_root_class_on_notice.place(x=0,y=0,width=150,height=40)
 class_on_notice=Var_class_on_notice.get()
 
@@ -823,6 +1081,7 @@ def sort_dict_by_time(input_dict):
     sorted_keys = [item[0] for item in sorted_time_list]
     return sorted_keys
 def Button_root_classtree_open_ClassTreeWindow():
+    global Permissions
     def close_ClassTreeWindow():
         ClassTreeWindow.destroy()
         root.focus_set()
@@ -1323,6 +1582,15 @@ def Button_root_classtree_open_ClassTreeWindow():
         Button_CompensatoryHolidaysWindow_tree_output=Button(CompensatoryHolidaysWindow,text='导出',command=Output_CompensatoryHolidays)
         Button_CompensatoryHolidaysWindow_tree_output.place(x=510,y=260,width=100,height=40)
 
+        if Permissions=='STUDENT':
+            Button_CompensatoryHolidaysWindow_tree_new['state']='disabled'
+            Button_CompensatoryHolidaysWindow_tree_revise['state']='disabled'
+            Button_CompensatoryHolidaysWindow_tree_delete['state']='disabled'
+            Button_CompensatoryHolidaysWindow_tree_import['state']='disabled'
+            Button_CompensatoryHolidaysWindow_tree_output['state']='disabled'
+
+
+
         try:
             remove_BOM('DATA/CompensatoryHolidays/CompensatoryHolidays.ini')
             Compensatory_Holidays_ini = configparser.ConfigParser()
@@ -1336,7 +1604,6 @@ def Button_root_classtree_open_ClassTreeWindow():
         for sec in Compensatory_Holidays_ini.sections():
             Tree_CompensatoryHolidaysWindow_tree.insert('',index='end',values=(sec,'%s/%s/%s'%(str(json.loads(Compensatory_Holidays_ini[sec]['date'])[0]),str(json.loads(Compensatory_Holidays_ini[sec]['date'])[1]),str(json.loads(Compensatory_Holidays_ini[sec]['date'])[2])),Compensatory_Holidays_ini[sec]['Compensatory'].replace('Monday','周一').replace('Tuesday','周二').replace('Wednesday','周三').replace('Thursday','周四').replace('Friday','周五')))
 
-
         CompensatoryHolidaysWindow.iconbitmap(str(res_icon_folder)+'/icon.ico')
         CompensatoryHolidaysWindow.mainloop()
 
@@ -1345,13 +1612,74 @@ def Button_root_classtree_open_ClassTreeWindow():
     Button_ClassTreeWindow_compensatoryholidays = Button(ClassTreeWindow, text="调休表", command=set_CompensatoryHolidays)
     Button_ClassTreeWindow_compensatoryholidays.place(x=800, y=380, width=100, height=40)
 
-#◀ ▶ ◀ ▶ ◀
+    if Permissions=='STUDENT':
+        Button_ClassTreeWindow_newclass['state']='disabled'
+        Button_ClassTreeWindow_temporaryclass['state']='disabled'
+        Button_ClassTreeWindow_popclass['state']='disabled'
+        Button_ClassTreeWindow_importclass['state']='disabled'
+        Button_ClassTreeWindow_outputclass['state']='disabled'
+        Button_ClassTreeWindow_makexlsx['state']='disabled'
+
     ClassTreeWindow.iconbitmap(str(res_icon_folder)+'/icon.ico')
     ClassTreeWindow.mainloop()
-
 Button_root_classtree=Button(root,text='课程表',command=Button_root_classtree_open_ClassTreeWindow)
 Button_root_classtree.place(x=150,y=0,width=150,height=40)
 
+
+def Thread_check_istime_to_playsound():
+    global running_threading,class_on_notice
+    while True:
+        if running_threading==False: break
+        try:#优先考虑调休日
+            remove_BOM('DATA/CompensatoryHolidays/CompensatoryHolidays.ini')
+            CompensatoryHolidays_ini = configparser.ConfigParser()
+            CompensatoryHolidays_ini.read('DATA/CompensatoryHolidays/CompensatoryHolidays.ini',encoding='utf-8')
+        except Exception as error:
+            #Message_Box(root, '读取调休日文件失败.\n错误代码: ' + str(error), '错误', icon='error')
+            continue
+
+        try:#正常课程表
+            with open('DATA/ClassTree/ClassTree.json','r',encoding='utf-8') as f:
+                Class_Tree = json.loads(f.read())
+        except Exception as error:
+            #Message_Box(root, '读取课程表文件失败.\n错误代码: ' + str(error), '错误',icon='error')
+            continue
+
+        weekday=time.strftime(r'%A')  #如果调休文件为空,则weekday=现在时间的星期
+        for sec in CompensatoryHolidays_ini.sections():#调休文件读入
+            date=json.loads(CompensatoryHolidays_ini[sec]['date'])
+            if int(time.strftime(r'%Y'))==date[0] and int(time.strftime(r'%m'))==date[1] and int(time.strftime(r'%d'))==date[2]:
+                weekday=CompensatoryHolidays_ini[sec]['Compensatory']
+            else:
+                weekday=time.strftime(r'%A')
+
+        if weekday=='Saturday' or weekday=='Sunday':#判断周末(要放在调休文件读入后面)
+            for i in range(61):#61
+                if running_threading==False:
+                    break
+            continue
+
+
+        for item in sort_dict_by_time(Class_Tree):#上课,往右翻,还有一个附加条件->    ->    ->
+            if int(Class_Tree[item]['Time'][0][0])==int(time.strftime(r'%H')) and int(Class_Tree[item]['Time'][0][1])==int(time.strftime(r'%M')) and class_on_notice==True:
+                win32api.Beep(659,1025);win32api.Beep(523,875);win32api.Beep(587,925);win32api.Beep(392,1250);win32api.Sleep(725);win32api.Beep(392,950);win32api.Beep(587,875);win32api.Beep(659,1025);win32api.Beep(523,800)
+                try:
+                    Balloon_Box(root,title='上课: %s'%(Class_Tree[item][weekday]),text='🖤再不回到座位坐好就要被罚抄课文了哦~🖤',staytime=0)
+                except:
+                    pass
+        for item in sort_dict_by_time(Class_Tree):#下课,往右翻,还有一个附加条件->    ->    ->
+            if int(Class_Tree[item]['Time'][1][0])==int(time.strftime(r'%H')) and int(Class_Tree[item]['Time'][1][1])==int(time.strftime(r'%M')) and class_on_notice==True:
+                try:
+                    Balloon_Box(root,title='下课: %s'%(Class_Tree[item][weekday]),text='🖤再不下课电脑就要强制关机了哦~🖤',staytime=0)
+                except:
+                    pass
+        for i in range(6):#61
+            print(i)
+            if running_threading==False:
+                break
+            time.sleep(1)
+Thread_check_istime_to_playsound=threading.Thread(target=Thread_check_istime_to_playsound,daemon=True)
+Thread_check_istime_to_playsound.start()
 
 
 
@@ -1385,22 +1713,6 @@ def Button_root_todotree_open_Edit_todo_Window():
     wait_todo_window.protocol("WM_DELETE_WINDOW", close_wait_todo_window)
     wait_todo_window.focus()
 
-    '''
-    def update_text_wait_todo_window_waittodo_(nothing):
-        nonlocal todo_ini
-        text_wait_todo_window_waittodo['state']='normal'
-        text_wait_todo_window_waittodo.delete(0.0,'end')
-        try:
-            selected_item = tree_wait_todo_window_waittodo.selection()[0]
-            values = tree_wait_todo_window_waittodo.item(selected_item)
-        except:
-            win32api.MessageBeep()
-            tree_wait_todo_window_waittodo.focus_set()
-            return
-        text_wait_todo_window_waittodo.insert(0.0,todo_ini[values['values'][0]]['text'].replace(r'\n','\n'))
-        text_wait_todo_window_waittodo['state']='disabled'
-    '''#tree_wait_todo_window_waittodo.bind('<<TreeviewSelect>>',update_text_wait_todo_window_waittodo_)
-
     yscroebar=Scrollbar(wait_todo_window,orient='vertical')
     yscroebar.place(x=480,y=20,width=20,height=400)
 
@@ -1414,7 +1726,6 @@ def Button_root_todotree_open_Edit_todo_Window():
 
     tree_wait_todo_window_waittodo.heading('date', text="日期", anchor='center')
     tree_wait_todo_window_waittodo.column('date', width=120, stretch=False,anchor='w')
-
 
 
     def COMMAND_button_wait_todo_window_new():
@@ -1549,10 +1860,13 @@ def Button_root_todotree_open_Edit_todo_Window():
     except Exception as error:
         Message_Box(wait_todo_window, '读取待办事务文件失败.\n错误代码: ' + str(error), '错误', icon='error')
         return
-    
+
+    if Permissions=='STUDENT':
+        button_wait_todo_window_new['state']='disabled'
+        button_wait_todo_window_delete['state']='disabled'
+
     wait_todo_window.iconbitmap(str(res_icon_folder)+'/icon.ico')
     wait_todo_window.mainloop()
-
 Button_root_todo=Button(root,text='待办事务',command=Button_root_todotree_open_Edit_todo_Window)
 Button_root_todo.place(x=150,y=40,width=150,height=40)
 
@@ -1709,22 +2023,11 @@ def COMMAND_Button_root_Keymapping():
         keyboard.press(key)
         time.sleep(0.02)
         keyboard.release(key)
-    def topmost():
-        while True:
-            nonlocal top
-            if top==True:
-                try:
-                    root_Button_PPT_showing_window.attributes('-topmost','true')
-                except:
-                    break
-            else:
-                break
-    top=True
+
+
     def question_root_Button_PPT_showing_window():
         Frame_exit.place(x=0,y=0,width=300,height=100)
     def close_and_exit_PPT_showing_window():
-        nonlocal top
-        top=False
         root_Button_PPT_showing_window.destroy()
 
     def left():
@@ -1744,7 +2047,7 @@ def COMMAND_Button_root_Keymapping():
     geometry = '%dx%d+%d+%d' % (width, height, 0, (screenheight - height - 60))
     root_Button_PPT_showing_window.geometry(geometry)
     root_Button_PPT_showing_window.resizable(width=False, height=False)
-    root_Button_PPT_showing_window.title("按键映射")
+    root_Button_PPT_showing_window.title("键盘映射")
     root_Button_PPT_showing_window.attributes('-topmost', 'true')
     root_Button_PPT_showing_window.attributes("-toolwindow", 1)
     root_Button_PPT_showing_window.protocol("WM_DELETE_WINDOW", question_root_Button_PPT_showing_window)
@@ -1762,7 +2065,7 @@ def COMMAND_Button_root_Keymapping():
     Frame_exit=tkinter.Frame(root_Button_PPT_showing_window,bd=0)
     Frame_exit.place(x=0,y=32000,width=300,height=100)
 
-    Button_exit=Button(Frame_exit,text='退出程序',command=close_and_exit_PPT_showing_window)
+    Button_exit=Button(Frame_exit,text='关闭窗口',command=close_and_exit_PPT_showing_window)
     Button_exit.place(x=0,y=0,width=150,height=100)
 
     def showwindow_root_Button_PPT_showing_window():
@@ -1771,7 +2074,6 @@ def COMMAND_Button_root_Keymapping():
     Button_donotexit=Button(Frame_exit,text='只是误触了',command=showwindow_root_Button_PPT_showing_window)
     Button_donotexit.place(x=150,y=0,width=150,height=100)
 
-    threading.Thread(target=topmost, daemon=True).start()
     root_Button_PPT_showing_window.iconbitmap(str(res_icon_folder)+'/icon.ico')
 
     root_Button_PPT_showing_window.mainloop()
@@ -1782,11 +2084,272 @@ Button_root_Keymapping.place(x=0,y=120,width=150,height=40)
 
 
 
-        
-tkinter.Label(root,text='今日待办:',anchor='w').place(x=0,y=160,width=300,height=30)
-Listbox_root_todo=Listbox(root,selectmode='browse',activestyle='none',highlightthickness=0,bd=2,relief='groove',selectforeground='black',selectbackground='#cde8ff',selectborderwidth=0)
-Listbox_root_todo.place(x=0,y=190,width=300,height=250)
 
+
+def COMMAND_Button_root_Clock():
+    running_showtime_threading=True
+    def close_Button_root_Clock_window():
+        nonlocal running_showtime_threading
+        running_showtime_threading=False
+        Button_root_Clock_window.destroy()
+        root.focus_set()
+    def close_Button_root_Clock_window_(nothing):
+        close_Button_root_Clock_window()
+    Button_root_Clock_window=Toplevel(root)
+    Button_root_Clock_window.title("时钟")
+    width = 800
+    height = 500
+    screenwidth = Button_root_Clock_window.winfo_screenwidth()
+    screenheight = Button_root_Clock_window.winfo_screenheight()
+    geometry = '%dx%d+%d+%d' % (width, height, int((screenwidth - width)/2), int((screenheight - height)/2))
+    Button_root_Clock_window.geometry(geometry)
+    Button_root_Clock_window.attributes('-topmost', 'true')
+    Button_root_Clock_window.protocol("WM_DELETE_WINDOW",close_Button_root_Clock_window)
+    Button_root_Clock_window.bind('<Escape>',close_Button_root_Clock_window_)
+    Button_root_Clock_window.focus()
+
+    Button_root_Clock_window_Label=tkinter.Label(Button_root_Clock_window,text='',font='微软雅黑 110')
+    Button_root_Clock_window_Label.pack(expand=True,fill='both')
+
+    def Button_root_Clock_window_Label_SHOWTIME():
+        nonlocal running_showtime_threading
+        while True:
+            if running_showtime_threading==False: break
+            try:
+                Button_root_Clock_window_Label['text']=time.strftime(r"%H:%M:%S")
+                Button_root_Clock_window.update()
+            except:
+                break
+    root.after(0,Button_root_Clock_window_Label_SHOWTIME)
+
+    Button_root_Clock_window.iconbitmap(str(res_icon_folder)+'/icon.ico')
+    Button_root_Clock_window.mainloop()
+Button_root_Clock=Button(root,text='时钟',command=COMMAND_Button_root_Clock)
+Button_root_Clock.place(x=150,y=120,width=150,height=40)
+
+
+
+
+
+
+
+
+
+
+def COMMAND_Button_root_DisabledCompute():
+    running_topmost_threading=True
+    mode=InputComboBox(parent=root,title='选择禁用屏幕的解锁模式',text='模式:',value=['密码解锁','定时解锁'],default='密码解锁')
+    if mode=='': return
+    elif mode=='密码解锁':
+        password=InputBox(parent=root,title='禁用屏幕的解锁密码',text='密码:',show='●',canspecialtext=True,canempty=False)
+        if password==None: return
+        try:
+            int(password)
+        except:
+            Message_Box(root,'密码必须是数字.','错误',icon='error')
+            return
+        if Message_Box(root,'请确认解锁电脑的密码为: '+str(password),'疑问',icon='question',buttonmode=2)!=True: return
+    elif mode=='定时解锁':
+        disabled_time=InputBox(parent=root,title='禁用屏幕的时长(分钟)',text='时长:',canspecialtext=True,canempty=False)
+        if disabled_time==None: return
+        try:
+            int(disabled_time)
+        except:
+            Message_Box(root,'时长只能是数字.','错误',icon='error')
+            return
+        if Message_Box(root,'请确认禁用屏幕的时长为: '+str(disabled_time)+' 分钟.','疑问',icon='question',buttonmode=2)!=True: return
+        if Message_Box(root,'在"定时解锁"模式下,未到达解锁时间任何人都无法解锁!','警告',icon='warning',buttonmode=2)!=True: return
+    
+    def run_window():
+        def DisabledCompute_window_destroy():
+            nonlocal running_topmost_threading
+            running_topmost_threading=False
+            DisabledCompute_window.destroy()
+        def DisabledCompute_window_pass():
+            pass
+
+        DisabledCompute_window=Toplevel(root)
+        DisabledCompute_window.resizable(width=False, height=False)
+        DisabledCompute_window.attributes('-topmost','true')
+        DisabledCompute_window.attributes('-fullscreen',True)
+        DisabledCompute_window.overrideredirect(True)
+        DisabledCompute_window.protocol("WM_DELETE_WINDOW", DisabledCompute_window_pass)
+        DisabledCompute_window['bg']='black'
+
+
+        def Thread_topmost():
+            while True:
+                nonlocal running_topmost_threading
+                global running_threading
+                if running_topmost_threading==False or running_threading==False: break
+                try:
+                    DisabledCompute_window.focus_force()
+                    DisabledCompute_window.attributes('-topmost',True)
+                except:
+                    break
+        Thread_topmost_threading=threading.Thread(target=Thread_topmost,daemon=True)
+        Thread_topmost_threading.start()
+
+        if mode=='定时解锁':
+            tkinter.Label(DisabledCompute_window,text='保持安静',bg='black',fg='yellow',font='微软雅黑 80').pack(fill='both',expand=True)
+            DisabledCompute_window.after(int(disabled_time)*60*1000,DisabledCompute_window_destroy)
+
+        elif mode=='密码解锁':
+            password_mistake_counter=0
+
+            Frame_PasswordKeyboard=tkinter.Frame(DisabledCompute_window,bd=0,width=240,height=360)
+            Frame_PasswordKeyboard.pack(anchor='center',expand=True)
+
+            Entry_Password=Entry(Frame_PasswordKeyboard,show='●',state='disabled',justify='center')
+            Entry_Password.place(x=0,y=0,width=240,height=40)
+
+            def COMMAND_insert_1():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','1')
+                Entry_Password['state']='readonly'
+            Button_1=Button(Frame_PasswordKeyboard,text='1',command=COMMAND_insert_1)
+            Button_1.place(x=0,y=40,width=80,height=80)
+
+            def COMMAND_insert_2():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','2')
+                Entry_Password['state']='readonly'
+            Button_2=Button(Frame_PasswordKeyboard,text='2',command=COMMAND_insert_2)
+            Button_2.place(x=80,y=40,width=80,height=80)
+
+            def COMMAND_insert_3():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','3')
+                Entry_Password['state']='readonly'
+            Button_3=Button(Frame_PasswordKeyboard,text='3',command=COMMAND_insert_3)
+            Button_3.place(x=160,y=40,width=80,height=80)
+
+            def COMMAND_insert_4():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','4')
+                Entry_Password['state']='readonly'
+            Button_4=Button(Frame_PasswordKeyboard,text='4',command=COMMAND_insert_4)
+            Button_4.place(x=0,y=120,width=80,height=80)
+
+            def COMMAND_insert_5():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','5')
+                Entry_Password['state']='readonly'
+            Button_5=Button(Frame_PasswordKeyboard,text='5',command=COMMAND_insert_5)
+            Button_5.place(x=80,y=120,width=80,height=80)
+
+            def COMMAND_insert_6():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','6')
+                Entry_Password['state']='readonly'
+            Button_6=Button(Frame_PasswordKeyboard,text='6',command=COMMAND_insert_6)
+            Button_6.place(x=160,y=120,width=80,height=80)
+
+            def COMMAND_insert_7():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','7')
+                Entry_Password['state']='readonly'
+            Button_7=Button(Frame_PasswordKeyboard,text='7',command=COMMAND_insert_7)
+            Button_7.place(x=0,y=200,width=80,height=80)
+
+            def COMMAND_insert_8():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','8')
+                Entry_Password['state']='readonly'
+            Button_8=Button(Frame_PasswordKeyboard,text='8',command=COMMAND_insert_8)
+            Button_8.place(x=80,y=200,width=80,height=80)
+
+            def COMMAND_insert_9():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','9')
+                Entry_Password['state']='readonly'
+            Button_9=Button(Frame_PasswordKeyboard,text='9',command=COMMAND_insert_9)
+            Button_9.place(x=160,y=200,width=80,height=80)
+
+            def COMMAND_check_password():
+                nonlocal password_mistake_counter
+                def Unlock_Buttons():
+                    nonlocal password_mistake_counter
+                    Entry_Password['state']='normal'
+                    Entry_Password['show']='●'
+                    Entry_Password.delete(0,'end')
+                    Entry_Password['state']='readonly'
+                    Button_1['state']='normal'
+                    Button_2['state']='normal'
+                    Button_3['state']='normal'
+                    Button_4['state']='normal'
+                    Button_5['state']='normal'
+                    Button_6['state']='normal'
+                    Button_7['state']='normal'
+                    Button_8['state']='normal'
+                    Button_9['state']='normal'
+                    Button_0['state']='normal'
+                    Button_ok['state']='normal'
+                    Button_delete['state']='normal'
+                
+                if Entry_Password.get()==password:
+                    DisabledCompute_window_destroy()
+                else:
+                    win32api.MessageBeep()
+                    Entry_Password['state']='normal'
+                    password_mistake_counter=password_mistake_counter+1
+                    Entry_Password.delete(0,'end')
+                    Entry_Password['state']='readonly'
+                    if password_mistake_counter>=5:
+                        password_mistake_counter=0
+                        Entry_Password['state']='normal'
+                        Entry_Password['show']=''
+                        Entry_Password.delete(0,'end')
+                        Entry_Password.insert(0,'密码连续错误,2分钟后再试.')
+                        Entry_Password['state']='readonly'
+                        Button_1['state']='disabled'
+                        Button_2['state']='disabled'
+                        Button_3['state']='disabled'
+                        Button_4['state']='disabled'
+                        Button_5['state']='disabled'
+                        Button_6['state']='disabled'
+                        Button_7['state']='disabled'
+                        Button_8['state']='disabled'
+                        Button_9['state']='disabled'
+                        Button_0['state']='disabled'
+                        Button_ok['state']='disabled'
+                        Button_delete['state']='disabled'
+                        Frame_PasswordKeyboard.after(120000,Unlock_Buttons)#120000
+                        
+            Button_ok=Button(Frame_PasswordKeyboard,text='确定',command=COMMAND_check_password)
+            Button_ok.place(x=0,y=280,width=80,height=80)
+
+            def COMMAND_insert_0():
+                Entry_Password['state']='normal'
+                Entry_Password.insert('end','0')
+                Entry_Password['state']='readonly'
+            Button_0=Button(Frame_PasswordKeyboard,text='0',command=COMMAND_insert_0)
+            Button_0.place(x=80,y=280,width=80,height=80)
+
+            def COMMAND_delete():
+                Entry_Password['state']='normal'
+                Entry_Password.delete(len(Entry_Password.get())-1)
+                Entry_Password['state']='readonly'
+            Button_delete=Button(Frame_PasswordKeyboard,text='删除',command=COMMAND_delete)
+            Button_delete.place(x=160,y=280,width=80,height=80)
+
+        DisabledCompute_window.mainloop()
+    run_window()
+Button_root_DisabledCompute=Button(root,text='禁用屏幕',command=COMMAND_Button_root_DisabledCompute)
+Button_root_DisabledCompute.place(x=0,y=160,width=150,height=40)
+
+
+
+
+
+
+
+
+
+        
+tkinter.Label(root,text='今日待办:',anchor='w').place(x=0,y=200,width=300,height=30)
+Listbox_root_todo=Listbox(root,selectmode='browse',activestyle='none',highlightthickness=0,bd=2,relief='groove',selectforeground='black',selectbackground='#cde8ff',selectborderwidth=0)
+Listbox_root_todo.place(x=0,y=230,width=300,height=250)
 
 def sort_dict_by_date_is_systemdate(data):
     """
@@ -1852,80 +2415,70 @@ def COMMAND_Button_root_for_Listbox_todo_finish_todo():
         Listbox_root_todo.delete(0,'end')
         for i in sort_dict_by_date_is_systemdate(Todo_Dictionary):
             Listbox_root_todo.insert('end',i)
-
 Button_root_for_Listbox_todo_finish_todo=Button(root,text='完成此待办',command=COMMAND_Button_root_for_Listbox_todo_finish_todo)
-Button_root_for_Listbox_todo_finish_todo.place(x=0,y=440,width=150,height=40)
-
-
-
-#尝试读取,保证程序运行
-try:#正常课程表
-    with open('DATA/ClassTree/ClassTree.json','r',encoding='utf-8') as f:
-        json.loads(f.read())
-except Exception as error:
-    Message_Box(root, '读取课程表文件失败.\n此错误不影响程序正常运行,但是会导致课程表及其附属功能无法使用.\n错误代码: ' + str(error), '错误',icon='error')
-
-
-try:#读调休文件
-    remove_BOM('DATA/CompensatoryHolidays/CompensatoryHolidays.ini')
-    configparser.ConfigParser().read('DATA/CompensatoryHolidays/CompensatoryHolidays.ini',encoding='utf-8')
-except Exception as error:
-    Message_Box(root, '读取调休表文件失败.\n此错误不影响程序正常运行,但是会导致调休日及其附属功能无法使用.\n错误代码: ' + str(error), '错误', icon='error')
+Button_root_for_Listbox_todo_finish_todo.place(x=0,y=480,width=150,height=40)
 
 
 
 
 
 
-
-def check_istime_to_playsound():
-    global running_threading,class_on_notice
-    while True:
-        if running_threading==False: break
-        try:#优先考虑调休日
-            remove_BOM('DATA/CompensatoryHolidays/CompensatoryHolidays.ini')
-            CompensatoryHolidays_ini = configparser.ConfigParser()
-            CompensatoryHolidays_ini.read('DATA/CompensatoryHolidays/CompensatoryHolidays.ini',encoding='utf-8')
-        except Exception as error:
-            #Message_Box(root, '读取调休日文件失败.\n错误代码: ' + str(error), '错误', icon='error')
-            continue
-
-        try:#正常课程表
-            with open('DATA/ClassTree/ClassTree.json','r',encoding='utf-8') as f:
-                Class_Tree = json.loads(f.read())
-        except Exception as error:
-            #Message_Box(root, '读取课程表文件失败.\n错误代码: ' + str(error), '错误',icon='error')
-            continue
-
-        weekday=time.strftime(r'%A')  #如果调休文件为空,则weekday=现在时间的星期
-        for sec in CompensatoryHolidays_ini.sections():#调休文件读入
-            date=json.loads(CompensatoryHolidays_ini[sec]['date'])
-            if int(time.strftime(r'%Y'))==date[0] and int(time.strftime(r'%m'))==date[1] and int(time.strftime(r'%d'))==date[2]:
-                weekday=CompensatoryHolidays_ini[sec]['Compensatory']
-            else:
-                weekday=time.strftime(r'%A')
-
-        if weekday=='Saturday' or weekday=='Sunday':#判断周末(要放在调休文件读入后面)
-            for i in range(61):#61
-                if running_threading==False:
-                    break
-            continue
+def UpdateWidgetPermissions():
+    global Permissions
+    if Permissions=='STUDENT':
+        Button_exit['state']='disabled'
+        Checkbutton_root_class_on_notice['state']='disabled'
+        Button_root_DisabledCompute['state']='disabled'
+        Button_root_Permissions_set_TEACHERPermissionsPassword['state']='disabled'
+        Button_root_for_Listbox_todo_finish_todo['state']='disabled'
+        Button_root_randomcaller['state']='disabled'
+        Button_root_Keymapping['state']='disabled'
+    elif Permissions=='TEACHER':
+        Button_exit['state']='normal'
+        Checkbutton_root_class_on_notice['state']='normal'
+        Button_root_DisabledCompute['state']='normal'
+        Button_root_Permissions_set_TEACHERPermissionsPassword['state']='normal'
+        Button_root_for_Listbox_todo_finish_todo['state']='normal'
+        Button_root_randomcaller['state']='normal'
+        Button_root_Keymapping['state']='normal'
 
 
-        for item in sort_dict_by_time(Class_Tree):#往右翻,还有一个附加条件->    ->    ->
-            if int(Class_Tree[item]['Time'][0][0])==int(time.strftime(r'%H')) and int(Class_Tree[item]['Time'][0][1])==int(time.strftime(r'%M')) and class_on_notice==True:
-                win32api.Beep(659,1025);win32api.Beep(523,875);win32api.Beep(587,925);win32api.Beep(392,1250);win32api.Sleep(725);win32api.Beep(392,950);win32api.Beep(587,875);win32api.Beep(659,1025);win32api.Beep(523,800)
-                Balloon_Box(root,title='即将上课: %s'%(Class_Tree[item][weekday]),text='别搁那神经了,赶紧滚回位子上准备上课!',staytime=0)
+def COMMAND_Button_root_Permissions_get_TEACHERPermissions():
+    global Permissions
+    if Permissions=='STUDENT':
+        TEACHERPermissions_password_input=Password_Box(parent=root,title='获得教师权限',text='输入教师权限密码(默认为123456):',defaultuser='TEACHER',defaultusertuple=('TEACHER',),usernamestate='disabled')
+        if TEACHERPermissions_password_input[0]==None: return
+        with open('DATA/Permissions/TEACHER.json','r',encoding='utf-8') as f:
+            TEACHERPermissions_password=json.loads(f.read())
+        if TEACHERPermissions_password_input[1]==TEACHERPermissions_password['Password']:
+            Permissions='TEACHER'
+        else:
+            Message_Box(root,'获得教师权限失败.\n密码错误.','错误',icon='error')
+    elif Permissions=='TEACHER':
+        Permissions='STUDENT'
+
+    UpdateWidgetPermissions()
+Button_root_Permissions_get_TEACHERPermissions=Button(root,text='切换权限',command=COMMAND_Button_root_Permissions_get_TEACHERPermissions)
+Button_root_Permissions_get_TEACHERPermissions.place(x=150,y=480,width=150,height=40)
 
 
-        for i in range(61):#61
-            print(i)
-            if running_threading==False:
-                break
-            time.sleep(1)
-    
-Thread_check_istime_to_playsound=threading.Thread(target=check_istime_to_playsound,daemon=True)
-Thread_check_istime_to_playsound.start()
+
+def COMMAND_Button_root_Permissions_set_TEACHERPermissionsPassword():
+    global Permissions
+    TEACHERPermissions_password_input1=Password_Box(parent=root,title='设置教师权限密码',text='输入新的教师权限密码:',defaultuser='TEACHER',defaultusertuple=('TEACHER',),usernamestate='disabled')
+    if TEACHERPermissions_password_input1[0]==None: return
+    TEACHERPermissions_password_input2=Password_Box(parent=root,title='设置教师权限密码',text='再次输入新的教师权限密码:',defaultuser='TEACHER',defaultusertuple=('TEACHER',),usernamestate='disabled')
+    if TEACHERPermissions_password_input2[0]==None: return
+    if TEACHERPermissions_password_input1!=TEACHERPermissions_password_input2:
+        Message_Box(root,'设置教师权限密码失败.\n两次输入的教师权限密码不一致.','错误',icon='error')
+        return
+    with open('DATA/Permissions/TEACHER.json','w',encoding='utf-8') as f:
+        json.dump({'Password':TEACHERPermissions_password_input1[1]},f)
+    Message_Box(root,'设置教师权限密码成功.','信息',icon='info')
+Button_root_Permissions_set_TEACHERPermissionsPassword=Button(root,text='设置教师权限密码',command=COMMAND_Button_root_Permissions_set_TEACHERPermissionsPassword)
+Button_root_Permissions_set_TEACHERPermissionsPassword.place(x=150,y=520,width=150,height=40)
+
+
 
 
 
@@ -1938,7 +2491,7 @@ Thread_check_istime_to_playsound.start()
 def question_exit():
     global running_threading
     Frame_question=tkinter.Frame(root)
-    Frame_question.place(x=0,y=480,width=150,height=40)
+    Frame_question.place(x=Button_exit.winfo_x(),y=Button_exit.winfo_y(),width=Button_exit.winfo_width(),height=Button_exit.winfo_height())
 
     def COMMAND_exit_yes():
         global running_threading
@@ -1950,18 +2503,174 @@ def question_exit():
 
     Button_question_no=Button(Frame_question,text='否',command=lambda: Frame_question.destroy())
     Button_question_no.place(x=75,y=0,width=75,height=40)
-
-
-    '''
-    if Message_Box(parent=root,text='是否退出?',title='询问',icon='question',buttonmode=2)!=True: return
-    running_threading=False
-    root.destroy()
-    sys.exit()'''
-
 Button_exit=Button(root,text='退出',command=question_exit)
-Button_exit.place(x=0,y=480,width=150,height=40)
+Button_exit.place(x=0,y=520,width=150,height=40)
 
 
+
+
+
+
+
+
+
+
+def COMMAND_root_Button_about():
+    def set_image(tk_label, img_path, img_size=None):
+        img_open = Image.open(img_path)
+        if img_size is not None:
+            height, width = img_size
+            img_h, img_w = img_open.size
+
+            if img_w > width:
+                size = (width, int(height * img_w / img_h))
+                img_open = img_open.resize(size, Image.LANCZOS)
+ 
+            elif img_h > height:
+                size = (int(width * img_h / img_w), height)
+                img_open = img_open.resize(size, Image.LANCZOS)
+        img = ImageTk.PhotoImage(img_open)
+        tk_label.config(image=img)
+        tk_label.image = img
+
+    
+    def close_root_Button_about_window():
+        root_Button_about_window.destroy()
+        root.focus_set()
+    def close_root_Button_about_window_(nothing):
+        close_root_Button_about_window()
+    
+    root_Button_about_window=Toplevel(root)
+    root_Button_about_window.title("关于")
+    # 设置窗口大小、居中
+    width = 850
+    height = 500
+    screenwidth = root_Button_about_window.winfo_screenwidth()
+    screenheight = root_Button_about_window.winfo_screenheight()
+    geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
+    root_Button_about_window.geometry(geometry)
+    root_Button_about_window.resizable(width=False, height=False)
+    root_Button_about_window.bind('<Escape>',close_root_Button_about_window_)
+    root_Button_about_window.protocol("WM_DELETE_WINDOW", close_root_Button_about_window)
+    root_Button_about_window.focus()
+
+    root_Button_about_window_Label_icon = tkinter.Label(root_Button_about_window,anchor="center", )
+    root_Button_about_window_Label_icon.place(x=20, y=20, width=100, height=100)
+    set_image(root_Button_about_window_Label_icon, str(res_icon_folder)+'/icon.ico', (100, 100))
+
+    scrollbary_FOR_root_Button_about_window_Text_about=Scrollbar(root_Button_about_window,orient='vertical',)
+    scrollbary_FOR_root_Button_about_window_Text_about.place(x=610,y=20,width=20,height=350)
+
+    root_Button_about_window_Text_about = Text(root_Button_about_window,bd=2,relief='groove',font='TkDefaultFont',wrap='char',yscrollcommand=scrollbary_FOR_root_Button_about_window_Text_about.set)
+    root_Button_about_window_Text_about.place(x=140, y=20, width=470, height=350)
+    root_Button_about_window_Text_about.insert(0.0,'''Copyright © 2024 炸图监管者. All rights reserved.
+■软件名: 班级辅助授课系统
+■开发者: 炸图监管者
+■版本号: 0.0.0.0
+■版权: Copyright © 2024 炸图监管者. All rights reserved.
+▲请使用官方软件(从Github下载),因为软件开源,所以下载第三方软件有安全风险.
+●本软件遵守AGPL-3.0开源协议.
+●联系方式仅支持E-mail/Discord/WhatsApp.
+●反馈BUG请通过E-mail/Discord反馈,不建议通过Github.
+●Discord/WhatsApp需要科学上网(Github可能需要),自行上网搜索方法,电子文盲别喷!''')
+    root_Button_about_window_Text_about.configure(state='disabled')
+
+    def LinkMessageBox_show_(nothing):
+        Link_Message_Box(title='器官资源管理器(彩蛋)',bigtext='大脑 无响应',text='如果关闭此器官,可能会丢失记忆.',text2='等待器官响应',text1='关闭器官',parent=root_Button_about_window,defaultfocus=1,defaultreturn=None)
+    root_Button_about_window_Text_about.bind('<Double-Button-1>',LinkMessageBox_show_)
+    scrollbary_FOR_root_Button_about_window_Text_about.config(command=root_Button_about_window_Text_about.yview)
+
+
+
+    scrollbary_FOR_root_Button_about_window_Text_Acknowledgments=Scrollbar(root_Button_about_window,orient='vertical',)
+    scrollbary_FOR_root_Button_about_window_Text_Acknowledgments.place(x=810,y=20,width=20,height=350)
+
+    scrollbarx_FOR_root_Button_about_window_Text_Acknowledgments=Scrollbar(root_Button_about_window,orient='horizontal')
+    scrollbarx_FOR_root_Button_about_window_Text_Acknowledgments.place(x=650,y=370,width=160,height=20)
+
+    root_Button_about_window_Text_Acknowledgments = Text(root_Button_about_window,bd=2,relief='groove',font='TkDefaultFont',wrap='none',xscrollcommand=scrollbarx_FOR_root_Button_about_window_Text_Acknowledgments.set,yscrollcommand=scrollbary_FOR_root_Button_about_window_Text_Acknowledgments.set)
+    root_Button_about_window_Text_Acknowledgments.place(x=650, y=20, width=160, height=350)
+    root_Button_about_window_Text_Acknowledgments.insert(0.0,'''鸣谢名单:
+再次感谢各位对开发者的发电与支持!
+2024年9月:
+●(无)
+2024年8月:
+●(无)''')
+    root_Button_about_window_Text_Acknowledgments.configure(state='disabled')
+    scrollbary_FOR_root_Button_about_window_Text_Acknowledgments.config(command=root_Button_about_window_Text_Acknowledgments.yview)
+    scrollbarx_FOR_root_Button_about_window_Text_Acknowledgments.config(command=root_Button_about_window_Text_Acknowledgments.xview)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    s1 =Style()
+    s1.configure("C.TButton",foreground='#0078e4')
+
+    def COMMAND_root_Button_about_window_Button_link_Github_openurl(): webbrowser.open("https://github.com/zhatujianguanzhe/Class-assisted_teaching_system")
+    root_Button_about_window_Button_link_Github = Button(root_Button_about_window, text="Github",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Github_openurl)
+    root_Button_about_window_Button_link_Github.place(x=20, y=140, width=100, height=40)
+
+    def COMMAND_root_Button_about_window_Button_link_Email_MessageBox(): Message_Box(parent=root_Button_about_window,text='E-mail: 1323738778@QQ.com\n仅反馈BUG和提出意见,无事勿扰.',title='信息',icon='info',buttonmode=1)
+    root_Button_about_window_Button_show_Email = Button(root_Button_about_window, text="E-mail",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Email_MessageBox)
+    root_Button_about_window_Button_show_Email.place(x=20, y=200, width=100, height=40)
+
+    def COMMAND_root_Button_about_window_Button_link_WhatsApp_MessageBox(): Message_Box(parent=root_Button_about_window,text='WhatsApp: 炸图监管者\n仅反馈BUG和提出意见,无事勿扰.',title='信息',icon='info',buttonmode=1)
+    root_Button_about_window_Button_show_WhatsApp = Button(root_Button_about_window, text="WhatsApp",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_WhatsApp_MessageBox)
+    root_Button_about_window_Button_show_WhatsApp.place(x=20, y=260, width=100, height=40)
+
+    def COMMAND_root_Button_about_window_Button_link_Bilibili_openurl(): webbrowser.open('https://space.bilibili.com/1342104465')
+    root_Button_about_window_Button_link_Bilibili = Button(root_Button_about_window, text="Bilibili",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Bilibili_openurl)
+    root_Button_about_window_Button_link_Bilibili.place(x=20, y=320, width=100, height=40)
+
+    def COMMAND_root_Button_about_window_Button_link_Discord_openurl(): webbrowser.open('https://discord.gg/zPNbV64Z')
+    root_Button_about_window_Button_link_Discord = Button(root_Button_about_window, text="Discord",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Discord_openurl)
+    root_Button_about_window_Button_link_Discord.place(x=20, y=380, width=100, height=40)
+
+    def COMMAND_root_Button_about_window_Button_link_YouTube_openurl(): webbrowser.open('https://www.youtube.com/@zhatujianguanzhe')
+    root_Button_about_window_Button_link_YouTube = Button(root_Button_about_window, text="YouTube",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_YouTube_openurl)
+    root_Button_about_window_Button_link_YouTube.place(x=20, y=440, width=100, height=40)
+
+
+    
+    def COMMAND_root_Button_about_window_Button_Message_Agreement(): win32api.MessageBox(0,'您已经同意过软件使用协议,请以首次使用软件时同意的协议为准.\n本文是直接照上文的,仅供参考,不具有任何意义!\n'+Agreement,'协议',win32con.MB_ICONINFORMATION|win32con.MB_TOPMOST|win32con.MB_TASKMODAL)
+    root_Button_about_window_Button_Agreement = Button(root_Button_about_window, text="软件协议",command=COMMAND_root_Button_about_window_Button_Message_Agreement)
+    root_Button_about_window_Button_Agreement.place(x=320, y=440, width=100, height=40)
+
+    root_Button_about_window_Label_donate = tkinter.Label(root_Button_about_window,text="开发者吃饱饭才能做更好的东西,可以的话,请开发者吃个甜甜圈吧.",anchor="w", )
+    root_Button_about_window_Label_donate.place(x=140, y=390, width=490, height=30)
+
+    def COMMAND_root_Button_about_window_Button_link_Aifadian_openurl(): webbrowser.open('ifdian.net/a/zhatujianguanzhe')
+    root_Button_about_window_Button_donate = Button(root_Button_about_window, text="捐助(爱发电)",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Aifadian_openurl)
+    root_Button_about_window_Button_donate.place(x=140, y=440, width=160, height=40)
+    
+
+
+    root_Button_about_window_Button_OK = Button(root_Button_about_window, text="确定",command=close_root_Button_about_window)
+    root_Button_about_window_Button_OK.place(x=710, y=440, width=120, height=40)
+
+    #.window_create('insert',window=---)
+    root_Button_about_window.iconbitmap(str(res_icon_folder)+'/icon.ico')
+    root_Button_about_window.mainloop()
+root_Button_about=tkinter.Button(root,text='关于',command=COMMAND_root_Button_about,bd=0,relief='groove',activebackground='#bcdcf4',bg='#e1e1e1')
+root_Button_about.place(x=0,y=560,width=300,height=40)
+#<Enter>
+def Enter_root_Button_about(n):
+    root_Button_about['text']='关于关于一些关于关于的关于'
+    root_Button_about['bg']='#d9ebf9'
+root_Button_about.bind('<Enter>',Enter_root_Button_about)
+def Leave_root_Button_about(n):
+    root_Button_about['text']='关于'
+    root_Button_about['bg']='#e1e1e1'
+root_Button_about.bind('<Leave>',Leave_root_Button_about)
 
 
 
@@ -1976,13 +2685,10 @@ Button_root_show.place(x=0,y=root.winfo_height()-20,width=300,height=40)
 root_hide()#一些BUG,只能这么做了
 root_show()
 
-
+UpdateWidgetPermissions()
 root.iconbitmap(str(res_icon_folder)+'/icon.ico')
 root.wait_window(root)
 
 running_threading=False
 
 sys.exit()
-
-
-

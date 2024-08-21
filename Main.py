@@ -2619,13 +2619,13 @@ def COMMAND_root_Button_about():
     root_Button_about_window_Button_link_Github = Button(root_Button_about_window, text="Github",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Github_openurl)
     root_Button_about_window_Button_link_Github.place(x=20, y=140, width=100, height=40)
 
-    def COMMAND_root_Button_about_window_Button_link_Email_MessageBox(): Message_Box(parent=root_Button_about_window,text='E-mail: 1323738778@QQ.com\n仅反馈BUG和提出意见,无事勿扰.',title='信息',icon='info',buttonmode=1)
-    root_Button_about_window_Button_show_Email = Button(root_Button_about_window, text="E-mail",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Email_MessageBox)
-    root_Button_about_window_Button_show_Email.place(x=20, y=200, width=100, height=40)
+    def COMMAND_root_Button_about_window_Button_link_index(): webbrowser.open("https://zhatujianguanzhe.github.io/IndexPage/")
+    root_Button_about_window_Button_show_WhatsApp = Button(root_Button_about_window, text="官网",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_index)
+    root_Button_about_window_Button_show_WhatsApp.place(x=20, y=200, width=100, height=40)
 
-    def COMMAND_root_Button_about_window_Button_link_WhatsApp_MessageBox(): Message_Box(parent=root_Button_about_window,text='WhatsApp: 炸图监管者\n仅反馈BUG和提出意见,无事勿扰.',title='信息',icon='info',buttonmode=1)
-    root_Button_about_window_Button_show_WhatsApp = Button(root_Button_about_window, text="WhatsApp",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_WhatsApp_MessageBox)
-    root_Button_about_window_Button_show_WhatsApp.place(x=20, y=260, width=100, height=40)
+    def COMMAND_root_Button_about_window_Button_link_Email_MessageBox(): Message_Box(parent=root_Button_about_window,text='E-mail: 1323738778@QQ.com\nWhatsApp: 炸图监管者\n仅反馈BUG和提出意见,无事勿扰.',title='信息',icon='info',buttonmode=1)
+    root_Button_about_window_Button_show_Email = Button(root_Button_about_window, text="E-mail/WhatsApp",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Email_MessageBox)
+    root_Button_about_window_Button_show_Email.place(x=20, y=260, width=100, height=40)
 
     def COMMAND_root_Button_about_window_Button_link_Bilibili_openurl(): webbrowser.open('https://space.bilibili.com/1342104465')
     root_Button_about_window_Button_link_Bilibili = Button(root_Button_about_window, text="Bilibili",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_Bilibili_openurl)
@@ -2638,8 +2638,6 @@ def COMMAND_root_Button_about():
     def COMMAND_root_Button_about_window_Button_link_YouTube_openurl(): webbrowser.open('https://www.youtube.com/@zhatujianguanzhe')
     root_Button_about_window_Button_link_YouTube = Button(root_Button_about_window, text="YouTube",style="C.TButton",command=COMMAND_root_Button_about_window_Button_link_YouTube_openurl)
     root_Button_about_window_Button_link_YouTube.place(x=20, y=440, width=100, height=40)
-
-
     
     def COMMAND_root_Button_about_window_Button_Message_Agreement(): win32api.MessageBox(0,'您已经同意过软件使用协议,请以首次使用软件时同意的协议为准.\n本文是直接照上文的,仅供参考,不具有任何意义!\n'+Agreement,'协议',win32con.MB_ICONINFORMATION|win32con.MB_TOPMOST|win32con.MB_TASKMODAL)
     root_Button_about_window_Button_Agreement = Button(root_Button_about_window, text="软件协议",command=COMMAND_root_Button_about_window_Button_Message_Agreement)
